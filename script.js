@@ -1,121 +1,96 @@
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const tabla = document.querySelector("#tablaContratos tbody");
-const form = document.querySelector("#formContrato");
-const btnCancelar = document.querySelector("#btnCancelar");
-let editId = null;
+const form = document.getElementById("formContrato");
+const btnCancelar = document.getElementById("btnCancelar");
 
-// 🔹 Al cargar la página
-document.addEventListener("DOMContentLoaded", cargarContratos);
+let editando = false;
+let idEditando = null;
 
-// 📖 READ
+// 🟢 Cargar contratos al iniciar
 async function cargarContratos() {
-  tabla.innerHTML = `<tr><td colspan="5" class="text-center">Cargando...</td></tr>`;
-  try {
-    const res = await fetch(`${SUPABASE_URL}?select=*`, {
-      method: "GET",
-      headers: {
-        "apikey": SUPABASE_KEY,
-        "Authorization": `Bearer ${SUPABASE_KEY}`,
-        "Content-Type": "application/json"
-      }
-    });
-
-    if (!res.ok) throw new Error("Error al obtener contratos");
-    const data = await res.json();
-
-    tabla.innerHTML = "";
-    if (data.length === 0) {
-      tabla.innerHTML = `<tr><td colspan="5" class="text-center text-muted">No hay contratos registrados</td></tr>`;
-      return;
-    }
-
-    data.forEach(row => {
-      tabla.innerHTML += `
-        <tr>
-          <td>${row.id}</td>
-          <td>${row.nombre_contrato}</td>
-          <td>${row.tipo_contrato}</td>
-          <td>${row.cuerpo_contrato}</td>
-          <td>
-            <button class="btn btn-warning btn-sm" onclick="editar(${row.id}, '${row.nombre_contrato}', '${row.tipo_contrato}', '${row.cuerpo_contrato}')">Editar</button>
-            <button class="btn btn-danger btn-sm" onclick="eliminar(${row.id})">Eliminar</button>
-          </td>
-        </tr>`;
-    });
-  } catch (err) {
-    console.error(err);
-    tabla.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Error al cargar contratos</td></tr>`;
+  const { data, error } = await supabase.from("contratos").select("*");
+  if (error) {
+    console.error("Error al cargar:", error);
+    return;
   }
+
+  tabla.innerHTML = "";
+  data.forEach(c => {
+    const fila = `
+      <tr>
+        <td>${c.id}</td>
+        <td>${c.nombre_contrato}</td>
+        <td>${c.tipo_contrato}</td>
+        <td>${c.cuerpo_contrato}</td>
+        <td>
+          <button class="btn btn-warning btn-sm" onclick="editar(${c.id}, '${c.nombre_contrato}', '${c.tipo_contrato}', '${c.cuerpo_contrato}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="eliminar(${c.id})">🗑️</button>
+        </td>
+      </tr>`;
+    tabla.innerHTML += fila;
+  });
 }
 
-// ➕ CREATE / ✏️ UPDATE
-form.addEventListener("submit", async (e) => {
+// 🟢 Guardar o actualizar contrato
+form.addEventListener("submit", async e => {
   e.preventDefault();
-
   const contrato = {
-    nombre_contrato: document.querySelector("#nombre_contrato").value,
-    tipo_contrato: document.querySelector("#tipo_contrato").value,
-    cuerpo_contrato: document.querySelector("#cuerpo_contrato").value
+    nombre_contrato: form.nombre_contrato.value,
+    tipo_contrato: form.tipo_contrato.value,
+    cuerpo_contrato: form.cuerpo_contrato.value
   };
 
-  try {
-    const method = editId ? "PATCH" : "POST";
-    const url = editId ? `${SUPABASE_URL}?id=eq.${editId}` : SUPABASE_URL;
-
-    const res = await fetch(url, {
-      method,
-      headers: {
-        "apikey": SUPABASE_KEY,
-        "Authorization": `Bearer ${SUPABASE_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(contrato)
-    });
-
-    if (!res.ok) throw new Error("Error al guardar");
-
-    alert(editId ? "Contrato actualizado" : "Contrato agregado");
-    form.reset();
-    editId = null;
-    document.querySelector("#btnGuardar").textContent = "Guardar";
-    cargarContratos();
-  } catch (err) {
-    alert("❌ Error: " + err.message);
+  if (editando) {
+    const { error } = await supabase
+      .from("contratos")
+      .update(contrato)
+      .eq("id", idEditando);
+    if (error) {
+      alert("❌ Error al actualizar");
+    } else {
+      alert("✅ Contrato actualizado");
+      editando = false;
+      idEditando = null;
+      form.reset();
+      cargarContratos();
+    }
+  } else {
+    const { error } = await supabase.from("contratos").insert([contrato]);
+    if (error) {
+      alert("❌ Error al guardar");
+    } else {
+      alert("✅ Contrato guardado");
+      form.reset();
+      cargarContratos();
+    }
   }
 });
 
-// 🗑 DELETE
-async function eliminar(id) {
-  if (!confirm("¿Seguro que deseas eliminar este contrato?")) return;
-  try {
-    const res = await fetch(`${SUPABASE_URL}?id=eq.${id}`, {
-      method: "DELETE",
-      headers: {
-        "apikey": SUPABASE_KEY,
-        "Authorization": `Bearer ${SUPABASE_KEY}`
-      }
-    });
+// 🟠 Editar contrato
+function editar(id, nombre, tipo, cuerpo) {
+  form.nombre_contrato.value = nombre;
+  form.tipo_contrato.value = tipo;
+  form.cuerpo_contrato.value = cuerpo;
+  editando = true;
+  idEditando = id;
+}
 
-    if (!res.ok) throw new Error("Error al eliminar");
-    alert("Contrato eliminado correctamente");
-    cargarContratos();
-  } catch (err) {
-    alert("❌ Error: " + err.message);
+// 🔴 Eliminar contrato
+async function eliminar(id) {
+  if (confirm("¿Eliminar este contrato?")) {
+    const { error } = await supabase.from("contratos").delete().eq("id", id);
+    if (error) alert("❌ Error al eliminar");
+    else {
+      alert("✅ Eliminado");
+      cargarContratos();
+    }
   }
 }
 
-// ✏️ EDIT
-function editar(id, nombre, tipo, cuerpo) {
-  editId = id;
-  document.querySelector("#nombre_contrato").value = nombre;
-  document.querySelector("#tipo_contrato").value = tipo;
-  document.querySelector("#cuerpo_contrato").value = cuerpo;
-  document.querySelector("#btnGuardar").textContent = "Actualizar";
-}
-
-// 🔁 CANCELAR
 btnCancelar.addEventListener("click", () => {
   form.reset();
-  editId = null;
-  document.querySelector("#btnGuardar").textContent = "Guardar";
+  editando = false;
+  idEditando = null;
 });
 
+cargarContratos();
