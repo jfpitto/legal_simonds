@@ -1,0 +1,65 @@
+<?php include('config.php'); ?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRUD Supabase - Contratos</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<div class="container mt-5">
+  <h2 class="text-center mb-4">📜 CRUD Supabase - Contratos</h2>
+
+  <!-- FORMULARIO -->
+  <div class="card mb-4 shadow">
+    <div class="card-body">
+      <form id="formContrato">
+        <input type="hidden" id="id">
+        <div class="row mb-3">
+          <div class="col-md-4">
+            <label class="form-label">Nombre Contrato</label>
+            <input type="text" class="form-control" id="nombre_contrato" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Tipo Contrato</label>
+            <input type="text" class="form-control" id="tipo_contrato" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Cuerpo Contrato</label>
+            <input type="text" class="form-control" id="cuerpo_contrato" required>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-success" id="btnGuardar">Guardar</button>
+        <button type="button" class="btn btn-secondary" id="btnCancelar">Cancelar</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- TABLA -->
+  <div class="card shadow">
+    <div class="card-body">
+      <table class="table table-bordered table-striped" id="tablaContratos">
+        <thead class="table-dark">
+          <tr>
+            <th>ID</th>
+            <th>Nombre Contrato</th>
+            <th>Tipo Contrato</th>
+            <th>Cuerpo Contrato</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Config JS -->
+<script>
+const SUPABASE_URL = "<?php echo SUPABASE_URL; ?>";
+const SUPABASE_KEY = "<?php echo SUPABASE_KEY; ?>";
+</script>
+<script src="script.js"></script>
+</body>
+</html>
